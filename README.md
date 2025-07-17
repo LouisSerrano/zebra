@@ -4,11 +4,9 @@
 # 1. Official Code
 Official PyTorch implementation of Zebra | [Accepted at ICML 2025](https://openreview.net/forum?id=Aj8RKCGwjE&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3DNeurIPS.cc%2F2024%2FConference%2FAuthors%23your-submissions))
 
-<a href="https://arxiv.org/abs/2406.02176"><img
-src="https://img.shields.io/badge/arXiv-AROMA-b31b1b.svg" height=25em></a>
 
 <p float="center">
-  <img src="./assets/new_aroma_inference_v2.jpg" width="800"/>
+  <img src="poster_zebra_v2.jpg" width="800"/>
 </p>
 
 To cite our work:
