@@ -1,0 +1,62 @@
+# LLaMA Finetuning Configuration
+
+# Inherit from base config
+defaults:
+  - base
+
+# Model parameters
+model:
+  # Override base model parameters if needed
+  hidden_size: 2048
+  num_hidden_layers: 24
+  num_attention_heads: 32
+
+# Training parameters
+learning_rate: 1e-5  # Lower learning rate for finetuning
+max_steps: 100000
+warmup_steps: 1000
+accumulate_grad_batches: 4
+
+# Data parameters
+batch_size: 32
+sequence_length: 20
+num_context_sequences: 5
+
+# Logging parameters
+wandb:
+  tags: ["llama", "finetune"]
+
+# Generation parameters
+generation:
+  max_length: 8192
+  num_return_sequences: 1
+  temperature: 0.7  # Lower temperature for more focused generation
+  top_k: 50
+  top_p: 0.9
+  repetition_penalty: 1.2  # Higher repetition penalty
+  do_sample: true
+
+# Checkpointing
+checkpoint:
+  save_top_k: 2
+  monitor: "val_loss"
+  mode: "min"
+  every_n_train_steps: 500
+  filename: "{step}-{val_loss:.4f}"
+
+# Finetuning specific parameters
+finetune:
+  # Path to pretrained model checkpoint
+  pretrained_model_path: null  # Set this to your pretrained model path
+  
+  # Which layers to finetune
+  trainable_layers:
+    - "lm_head"
+    - "model.layers.23"  # Last layer
+    - "model.layers.22"  # Second to last layer
+  
+  # Freeze other layers
+  freeze_other_layers: true
+  
+  # Layer-wise learning rate decay
+  layer_decay: 0.95  # Learning rate decay factor per layer 

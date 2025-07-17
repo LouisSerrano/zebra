@@ -1,0 +1,61 @@
+# VQVAE1D Tokenizer Configuration
+
+
+data:
+  data_dir: "/mnt/home/lserrano/data/"
+  dataset_name: "advection"
+  sub_t: 10
+  slice_size: 1
+
+model:
+  channels: 1
+  init_dim: 64
+  max_dim: 256
+  layers:
+    - "residual"
+    - "compress_space"
+    - "compress_space"
+    - "compress_space"
+    - "compress_space"
+    - "residual"
+  code_dim: 64
+  num_codebooks: 2
+  codebook_size: 256
+  num_groups: 8
+  pad_mode: "circular"
+  quantization_type: "resvq"
+  shared_codebook: true
+  input_conv_kernel_size: 5
+  residual_conv_kernel_size: 3
+
+training:
+  commitment_weight: 0.25
+  learning_rate: 1e-4
+  weight_decay: 1e-4
+  batch_size: 64
+  max_steps: 300000
+  warmup_steps: 1000
+  seed: 42
+  num_workers: 4
+  accelerator: "auto"
+  devices: 1
+  strategy: "auto"
+  precision: "32"
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 1
+
+logging:
+  project: "zebra"
+  entity: null  # Set this to your wandb username
+  tags: ["vq", "1d"]
+  save_every_n_steps: 5000
+  checkpoint_every_n_steps: 5000 
+  output_dir: "outputs"
+
+huggingface:
+  push_to_hub: false
+  repo_name: "zebra-vqvae1d"
+  private: true
+  commit_message: "Add VQVAE1D tokenizer"
+  model_card: "tokenizer_model_card.md"
+  model_card_template: "tokenizer_model_card.md"
