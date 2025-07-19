@@ -2,9 +2,11 @@
 data:
   data_dir: "/mnt/home/lserrano/data/"
   dataset_name: "advection"
-  tokenizer_path: "/mnt/home/lserrano/zebra/outputs/2025-07-17/03-58-40/outputs/checkpoints/last.ckpt"
+  token_dataset_path: "/mnt/home/lserrano/zebra/tokens/"
+  tokenizer_path: "/mnt/home/lserrano/zebra/outputs/"
   sub_t: 10
   slice_size: 10
+  num_context_trajectories: 1
 
 # Model parameters
 model:
@@ -16,8 +18,7 @@ model:
   max_position_embeddings: 8192  # Maximum sequence length
   rms_norm_eps: 1e-6  # RMS norm epsilon
   num_dimensions: 1
-  max_length: 1024
-  num_context_images: 1
+  max_length: 8192
   bos_token_id: 
   eos_token_id: 
   context_token_id: 
@@ -31,7 +32,7 @@ training:
   learning_rate: 1e-4
   weight_decay: 1e-4
   batch_size: 64
-  max_steps: 300000
+  max_steps: 100000
   warmup_steps: 1000
   seed: 42
   num_workers: 4
@@ -41,7 +42,7 @@ training:
   precision: "32"
   gradient_clip_val: 1.0
   accumulate_grad_batches: 1
-  need_to_encode: true
+  tokenize_on_the_fly: False
 
 logging:
   project: "zebra"
@@ -49,7 +50,7 @@ logging:
   tags: ["llama", "1d"]
   save_every_n_steps: 5000
   checkpoint_every_n_steps: 5000 
-  output_dir: "outputs"
+  output_dir: "~/zebra/outputs"
 
 # Hugging Face parameters
 huggingface:

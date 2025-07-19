@@ -31,7 +31,7 @@ class LLaMATrainer(L.LightningModule):
         sch = self.lr_schedulers()
         
         # Tokenize input
-        if self.need_to_encode:
+        if self.tokenize_on_the_fly:
             images, context_images = batch
             t = images.shape[-1]
 
@@ -79,7 +79,7 @@ class LLaMATrainer(L.LightningModule):
     
     def validation_step(self, batch, batch_idx) -> STEP_OUTPUT:
         # Tokenize input
-        if self.need_to_encode:
+        if self.tokenize_on_the_fly:
             images, context_images = batch
             t = images.shape[-1]
 

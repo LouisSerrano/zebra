@@ -15,4 +15,5 @@ module load nccl
 
 source $VENVDIR/zebra/bin/activate 
 
-python3 scripts/tokenizer/train.py model.code_dim=64 training.max_steps=300000
+run_name=tokenizer_wave2d_emb2048_dim16
+python3 scripts/llama/pretrain.py data.sub_t=3 data.dataset_name=wave2d data.tokenizer_path="/mnt/home/lserrano/zebra/outputs/${run_name}/last.ckpt" 

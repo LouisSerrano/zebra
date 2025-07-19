@@ -239,10 +239,10 @@ class TemporalDataset(torch.utils.data.Dataset):
     
 
 class TemporalDatasetWithContext(torch.utils.data.Dataset):
-    def __init__(self, u, sub_t=10, slice_size=10, num_context_images=1):
+    def __init__(self, u, sub_t=10, slice_size=10, num_context_trajectories=1):
         self.u = u 
         self.slice_size = slice_size
-        self.num_context_images = num_context_images
+        self.num_context_trajectories = num_context_trajectories
         self.subsampling_t = sub_t
         self.random_t = False
 
@@ -267,7 +267,7 @@ class TemporalDatasetWithContext(torch.utils.data.Dataset):
         ctx_idx_list = [i for i in range(min_index, max_index+1)] 
         ctx_idx_list.remove(idx)
         random.shuffle(ctx_idx_list)
-        for j in range(self.num_context_images):
+        for j in range(self.num_context_trajectories):
             if self.random_t:
                 start_index = np.random.randint(0, max_start_index + 1)  # WARNING test ongoing
             ctx_idx = ctx_idx_list[j]
@@ -275,7 +275,7 @@ class TemporalDatasetWithContext(torch.utils.data.Dataset):
 
         context_images = torch.stack(context_images)
 
-        return images.float(), context_images.float()
+        return images, context_images
 
 
 
@@ -385,10 +385,10 @@ class WaveDataset(Dataset):
             seed = torch.tensor(f[f'{self.group}/seed'][idx], dtype=torch.float32)
         return state
     
-def load_wave2d(file_name, train_batch_size = 32, val_batch_size = 32, slice_size=1, shuffle=True):
+def load_wave2d(file_name, train_batch_size = 32, val_batch_size = 32, sub_t=1, slice_size=1, shuffle=True):
     file_name = os.path.join(file_name, 'wave2d')#actually wave easy
-    train_data = WaveDataset(os.path.join(file_name, 'train.h5'), group = 'train', slice_size=slice_size)
-    val_data = WaveDataset(os.path.join(file_name, 'val.h5'), group = 'val', slice_size=slice_size)
+    train_data = WaveDataset(os.path.join(file_name, 'train.h5'), group = 'train', sub_t=sub_t, slice_size=slice_size)
+    val_data = WaveDataset(os.path.join(file_name, 'val.h5'), group = 'val', sub_t=sub_t, slice_size=slice_size)
     test_data = WaveDataset(os.path.join(file_name, 'test.h5'), group = 'test', slice_size=slice_size)
     train_loader = DataLoader(train_data, batch_size= train_batch_size, shuffle=shuffle, num_workers=1, pin_memory=True,)
     val_loader = DataLoader(val_data, batch_size=val_batch_size, shuffle=False, pin_memory=True,)
@@ -396,17 +396,17 @@ def load_wave2d(file_name, train_batch_size = 32, val_batch_size = 32, slice_siz
     return train_loader, val_loader, test_loader
 
 
-def load_rd(file_name, train_batch_size = 32, val_batch_size = 32, slice_size=1, shuffle=True):
+def load_rd(file_name, train_batch_size = 32, val_batch_size = 32, sub_t=1, slice_size=1, shuffle=True):
     file_name = os.path.join(file_name, 'rd')#actually wave easy
-    train_data = ReacDiffDataset(os.path.join(file_name, 'train.h5'), group = 'train', slice_size=slice_size)
-    val_data = ReacDiffDataset(os.path.join(file_name, 'val.h5'), group = 'val', slice_size=slice_size)
-    test_data = ReacDiffDataset(os.path.join(file_name, 'test.h5'), group = 'test', slice_size=slice_size)
+    train_data = ReacDiffDataset(os.path.join(file_name, 'train.h5'), group = 'train', sub_t=sub_t, slice_size=slice_size)
+    val_data = ReacDiffDataset(os.path.join(file_name, 'val.h5'), group = 'val', sub_t=sub_t, slice_size=slice_size)
+    test_data = ReacDiffDataset(os.path.join(file_name, 'test.h5'), group = 'test', sub_t=sub_t, slice_size=slice_size)
     train_loader = DataLoader(train_data, batch_size= train_batch_size, shuffle=shuffle, num_workers=1, pin_memory=True,)
     val_loader = DataLoader(val_data, batch_size=val_batch_size, shuffle=False, pin_memory=True,)
     test_loader = DataLoader(test_data, batch_size=val_batch_size, shuffle=False, pin_memory=True,)
     return train_loader, val_loader, test_loader
 
-def load_vort(file_name, train_batch_size = 32, val_batch_size = 32, slice_size=1, shuffle=True, smooth=True):
+def load_vort(file_name, train_batch_size = 32, val_batch_size = 32, sub_t=1, slice_size=1, shuffle=True, smooth=True):
     file_name = os.path.join(file_name, 'vorticity')
     train_data = VortDataset(os.path.join(file_name, 'train.h5'), group = 'train', slice_size=slice_size, smooth=smooth)
     val_data = VortDataset(os.path.join(file_name, 'val.h5'), group = 'val', slice_size=slice_size, smooth=smooth)
@@ -415,3 +415,47 @@ def load_vort(file_name, train_batch_size = 32, val_batch_size = 32, slice_size=
     val_loader = DataLoader(val_data, batch_size=val_batch_size, shuffle=False, pin_memory=True)
     test_loader = DataLoader(test_data, batch_size=val_batch_size, shuffle=False)
     return train_loader, val_loader, test_loader
+
+
+
+def tokenize_dataset(token_dataset_path, run_name, train_loader, val_loader, test_loader, tokenizer, device):
+    try:
+        token_train = torch.load(f"{token_dataset_path}/{run_name}/train_token.pt")
+        token_val = torch.load(f"{token_dataset_path}/{run_name}/val_token.pt")
+        token_test = torch.load(f"{token_dataset_path}/{run_name}/test_token.pt")
+    
+    except: 
+        token_train = []
+        token_val = []
+        token_test = []
+        
+        with torch.no_grad():
+            for out_list, loader in zip([token_train, token_val, token_test], [train_loader, val_loader, test_loader]):
+                for batch in loader:
+                    sequences = batch.to(device).float()
+                    t = sequences.shape[-1]
+
+                    if batch.ndim==4:
+                        sequences = rearrange(sequences, "b c h t-> (b t) c h")
+                    elif batch.ndim==5:
+                        sequences = rearrange(sequences, "b c h w t-> (b t) c h w")
+                        
+                    codes, indices = tokenizer(sequences, return_codes=True)
+
+                    if batch.ndim==4:
+                        indices = rearrange(indices, "(b t) c h -> b c h t", t=t)
+                    elif batch.ndim==5:
+                        indices = rearrange(indices, "(b t) c h w -> b c h w t", t=t)
+
+                    out_list.append(indices.cpu().detach()) 
+
+        token_train = torch.cat(token_train, axis=0)
+        token_val = torch.cat(token_val, axis=0)
+        token_test = torch.cat(token_test, axis=0)
+        
+        os.makedirs(f"{token_dataset_path}/{run_name}/", exist_ok=True)
+        torch.save(token_train, f"{token_dataset_path}/{run_name}/train_token.pt")
+        torch.save(token_val, f"{token_dataset_path}/{run_name}/val_token.pt")
+        torch.save(token_test, f"{token_dataset_path}/{run_name}/test_token.pt")
+    
+    return token_train, token_val, token_test

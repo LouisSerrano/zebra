@@ -52,7 +52,7 @@ logging:
   tags: ["vq", "1d"]
   save_every_n_steps: 5000
   checkpoint_every_n_steps: 5000 
-  output_dir: "outputs"
+  output_dir: "~/zebra/outputs"
 
 huggingface:
   push_to_hub: false

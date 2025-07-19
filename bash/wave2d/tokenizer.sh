@@ -15,4 +15,4 @@ module load nccl
 
 source $VENVDIR/zebra/bin/activate 
 
-python3 scripts/tokenizer/train.py --config-name=vqvae2d data.dataset_name=wave2d model.pad_mode="zeros"
+python3 scripts/tokenizer/train.py --config-name=vqvae2d data.dataset_name=wave2d model.pad_mode="zeros" model.codebook_size=2048 training.max_steps=250000

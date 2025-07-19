@@ -6,7 +6,7 @@ Official PyTorch implementation of Zebra | [Accepted at ICML 2025](https://openr
 
 
 <p float="center">
-  <img src="poster_zebra_v2.jpg" width="800"/>
+  <img src="assets/poster_zebra_v2.jpg" width="800"/>
 </p>
 
 To cite our work:

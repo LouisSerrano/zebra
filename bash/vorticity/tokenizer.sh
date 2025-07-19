@@ -15,4 +15,4 @@ module load nccl
 
 source $VENVDIR/zebra/bin/activate 
 
-python3 scripts/tokenizer/train.py --config-name=vqvae2d data.dataset_name=vorticity model.codebook_size=2048 model.num_codebooks=1 model.init_dim=128 model.num_groups=32 "model.layers=['residual', 'compress_space', 'residual', 'compress_space', 'residual']" training.smoothing=True 
+python3 scripts/tokenizer/train.py --config-name=vqvae2d data.dataset_name=vorticity model.codebook_size=2048 model.num_codebooks=1 model.init_dim=128 model.num_groups=32 "model.layers=['residual', 'compress_space', 'residual', 'compress_space', 'residual']" training.smoothing=True training.max_steps=120000 
