@@ -15,4 +15,5 @@ module load nccl
 
 source $VENVDIR/zebra/bin/activate 
 
-python3 scripts/tokenizer/train.py model.code_dim=64 training.max_steps=300000
+run_name=tokenizer_heat2_emb256_dim64
+python3 scripts/llama/pretrain.py data.dataset_name=heat2 data.tokenizer_path="/mnt/home/lserrano/zebra/outputs/${run_name}/last.ckpt" 

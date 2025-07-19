@@ -2,8 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
 from torch.nn import Module, ModuleList
-from torch.autograd import grad as torch_grad
-from vector_quantize_pytorch import ResidualVQ
+from .residual_vq import ResidualVQ
 from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from beartype import beartype
@@ -393,6 +392,7 @@ class VQVAE2D(Module):
         self.rel_loss = RelativeL2()
         self.quantization_type = quantization_type
         self.commitment_weight = commitment_weight
+        self.codebook_size = codebook_size
         # Build encoder
         self.encoder_layers = ModuleList([])
         self.decoder_layers = ModuleList([])
@@ -576,7 +576,7 @@ class VQVAE2D(Module):
         return_loss: bool = False,
         return_codes: bool = False,
         return_recon: bool = False,
-    ) -> Union[Tensor, Tuple[Tensor, dict]]:
+    ) -> Union[Tensor, Tuple[Tensor, dict], Tuple[Tensor, Tensor]]:
         """Forward pass through the tokenizer.
         
         Args:

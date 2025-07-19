@@ -15,4 +15,5 @@ module load nccl
 
 source $VENVDIR/zebra/bin/activate 
 
-python3 scripts/llama/train.py data.dataset_name=burgers_nu_forcing2 model.code_dim=64
+run_name=tokenizer_burgers_nu_forcing2_emb256_dim64
+python3 scripts/llama/pretrain.py data.dataset_name=burgers_nu_forcing2 data.tokenizer_path="/mnt/home/lserrano/zebra/outputs/${run_name}/last.ckpt" 

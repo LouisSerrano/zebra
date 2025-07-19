@@ -33,9 +33,10 @@ def train(cfg: DictConfig):
     #L.seed_everything(cfg.training.seed)
     
     # Create logger with descriptive run name
+    run_name=get_wandb_run_name(cfg)
     logger = WandbLogger(
         project=cfg.logging.project,
-        name=get_wandb_run_name(cfg),
+        name=run_name,
         config=OmegaConf.to_container(cfg, resolve=True),
     )
     dataset_name = cfg.data.dataset_name
@@ -81,9 +82,11 @@ def train(cfg: DictConfig):
     )
 
     # Create callbacks
+    print(cfg.logging.output_dir)
+    print(run_name)
     callbacks = [
         ModelCheckpoint(
-            dirpath=os.path.join(cfg.logging.output_dir, "checkpoints"),
+            dirpath=os.path.join(cfg.logging.output_dir, run_name),
             filename="{step}-{val_rel_loss:.2f}",
             monitor="val_rel_loss",
             mode="min",

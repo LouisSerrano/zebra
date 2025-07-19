@@ -15,4 +15,5 @@ module load nccl
 
 source $VENVDIR/zebra/bin/activate 
 
-python3 scripts/llama/pretrain.py 
+run_name=tokenizer_advection_emb256_dim64
+python3 scripts/llama/pretrain.py data.tokenizer_path="/mnt/home/lserrano/zebra/outputs/${run_name}/last.ckpt" 
