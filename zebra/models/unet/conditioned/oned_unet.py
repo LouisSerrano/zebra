@@ -5,25 +5,12 @@ from typing import List, Optional, Tuple, Union
 import torch
 from torch import nn
 
-#from .condition_utils import ConditionedBlock, fourier_embedding, zero_module
-from einops import rearrange
+from .activations import ACTIVATION_REGISTRY
+
+from .condition_utils import ConditionedBlock, fourier_embedding, zero_module
 
 # Largely based on https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/diffusion/ddpm/unet.py
 # MIT License
-
-import torch
-import torch.nn as nn
-import torch.fft
-
-from torch import nn
-
-ACTIVATION_REGISTRY = {
-    "relu": nn.ReLU(),
-    "silu": nn.SiLU(),
-    "gelu": nn.GELU(),
-    "tanh": nn.Tanh(),
-    "sigmoid": nn.Sigmoid(),
-}
 
 
 def conv_layer(
@@ -39,7 +26,7 @@ def conv_layer(
         raise NotImplementedError(f"n_dims {n_dims} not implemented")
 
 
-class OldResidualBlock(nn.Module):
+class ResidualBlock(ConditionedBlock):
     """Wide Residual Blocks used in modern Unet architectures.
 
     Args:
@@ -104,6 +91,7 @@ class OldResidualBlock(nn.Module):
             h = self.norm2(h) * (1 + scale) + shift  # where we do -1 or +1 doesn't matter
             h = self.conv2(self.activation(h))
         else:
+            #print('h', h.shape, emb_out.shape, emb.shape)
             h = h + emb_out
             # Second convolution layer
             h = self.conv2(self.activation(self.norm2(h)))
@@ -111,8 +99,7 @@ class OldResidualBlock(nn.Module):
         return h + self.shortcut(x)
 
 
-
-class ResidualBlock(nn.Module):
+class ConditionalResidualBlock(ConditionedBlock):
     """Wide Residual Blocks used in modern Unet architectures.
 
     Args:
@@ -130,7 +117,8 @@ class ResidualBlock(nn.Module):
         self,
         in_channels: int,
         out_channels: int,
-        cond_channels: int,
+        cond_channels_main: int,
+        cond_channels_emb: int,
         activation: str = "gelu",
         norm: bool = False,
         n_groups: int = 1,
@@ -148,10 +136,8 @@ class ResidualBlock(nn.Module):
         else:
             raise NotImplementedError(f"Activation {activation} not implemented")
 
-        self.conv1 = conv_layer(in_channels, out_channels, kernel_size=3, n_dims=n_dims)
-        #self.conv2 = zero_module(conv_layer(out_channels, out_channels, kernel_size=3, n_dims=n_dims))
-        self.conv2 = conv_layer(out_channels, out_channels, kernel_size=3, n_dims=n_dims)
-
+        self.conv1 = conv_layer(in_channels + cond_channels_main, out_channels, kernel_size=3, n_dims=n_dims)
+        self.conv2 = zero_module(conv_layer(out_channels, out_channels, kernel_size=3, n_dims=n_dims))
         # If the number of input channels is not equal to the number of output channels we have to
         # project the shortcut connection
         if in_channels != out_channels:
@@ -160,23 +146,26 @@ class ResidualBlock(nn.Module):
             self.shortcut = nn.Identity()
 
         if norm:
-            self.norm1 = nn.GroupNorm(n_groups, in_channels)
+            self.norm1 = nn.GroupNorm(n_groups, in_channels + cond_channels_main)
             self.norm2 = nn.GroupNorm(n_groups, out_channels)
         else:
             self.norm1 = nn.Identity()
             self.norm2 = nn.Identity()
 
-        self.cond_emb = nn.Linear(cond_channels, 2 * out_channels if use_scale_shift_norm else out_channels)
+        self.cond_emb = nn.Linear(cond_channels_emb, 2 * out_channels if use_scale_shift_norm else out_channels)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, emb: torch.Tensor, cond: torch.Tensor):
         # First convolution layer
-        h = self.conv1(self.activation(self.norm1(x)))
+        h = self.conv1(self.activation(self.norm1(torch.cat([x, cond], dim=1))))
+        emb_out = self.cond_emb(emb)
+        while len(emb_out.shape) < len(h.shape):
+            emb_out = emb_out[..., None]
         if self.use_scale_shift_norm:
-            #scale, shift = torch.chunk(emb_out, 2, dim=1)
-            h = self.norm2(h) #* (1 + scale) + shift  # where we do -1 or +1 doesn't matter
+            scale, shift = torch.chunk(emb_out, 2, dim=1)
+            h = self.norm2(h) * (1 + scale) + shift  # where we do -1 or +1 doesn't matter
             h = self.conv2(self.activation(h))
         else:
-            h = h #+ emb_out
+            h = h + emb_out
             # Second convolution layer
             h = self.conv2(self.activation(self.norm2(h)))
         # Add the shortcut connection and return
@@ -245,7 +234,7 @@ class AttentionBlock(nn.Module):
         return res
 
 
-class DownBlock(nn.Module):
+class DownBlock(ConditionedBlock):
     """Down block This combines `ResidualBlock` and `AttentionBlock`.
 
     These are used in the first half of U-Net at each resolution.
@@ -287,13 +276,13 @@ class DownBlock(nn.Module):
         else:
             self.attn = nn.Identity()
 
-    def forward(self, x: torch.Tensor):
-        x = self.res(x)
+    def forward(self, x: torch.Tensor, emb: torch.Tensor):
+        x = self.res(x, emb)
         x = self.attn(x)
         return x
 
 
-class UpBlock(nn.Module):
+class UpBlock(ConditionedBlock):
     """Up block This combines `ResidualBlock` and `AttentionBlock`.
 
     These are used in the second half of U-Net at each resolution.
@@ -337,13 +326,13 @@ class UpBlock(nn.Module):
         else:
             self.attn = nn.Identity()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.res(x)
+    def forward(self, x: torch.Tensor, emb: torch.Tensor) -> torch.Tensor:
+        x = self.res(x, emb)
         x = self.attn(x)
         return x
 
 
-class MiddleBlock(nn.Module):
+class MiddleBlock(ConditionedBlock):
     """Middle block It combines a `ResidualBlock`, `AttentionBlock`, followed by another
     `ResidualBlock`.
 
@@ -390,10 +379,10 @@ class MiddleBlock(nn.Module):
             n_dims=n_dims,
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.res1(x)
+    def forward(self, x: torch.Tensor, emb: torch.Tensor) -> torch.Tensor:
+        x = self.res1(x, emb)
         x = self.attn(x)
-        x = self.res2(x)
+        x = self.res2(x, emb)
         return x
 
 
@@ -480,7 +469,7 @@ class Unet(nn.Module):
         use_scale_shift_norm: bool = False,
         use1x1: bool = False,
         n_dims: int = 1,
-        **kwargs
+        code_dim:int = 256,
     ) -> None:
         super().__init__()
         self.n_input_scalar_components = n_input_scalar_components
@@ -503,6 +492,13 @@ class Unet(nn.Module):
         insize = time_history * (self.n_input_scalar_components + self.n_input_vector_components * 2)
         n_channels = hidden_channels
         time_embed_dim = hidden_channels * 4
+
+        self.z_embed = nn.Sequential(
+            nn.Linear(code_dim, 256),
+            self.activation,
+            nn.Linear(256, time_embed_dim),
+        )
+
         self.time_embed = nn.Sequential(
             nn.Linear(hidden_channels, time_embed_dim),
             self.activation,
@@ -622,15 +618,37 @@ class Unet(nn.Module):
             self.norm = nn.Identity()
         out_channels = time_future * (self.n_output_scalar_components + self.n_output_vector_components * 2)
         if use1x1:
-            self.final = conv_layer(in_channels, out_channels, kernel_size=1, n_dims=n_dims)
+            self.final = zero_module(conv_layer(in_channels, out_channels, kernel_size=1, n_dims=n_dims))
         else:
-            self.final = conv_layer(in_channels, out_channels, kernel_size=3, n_dims=n_dims)
+            self.final = zero_module(conv_layer(in_channels, out_channels, kernel_size=3, n_dims=n_dims))
 
-    def forward(self, x: torch.Tensor):
-        #orig_shape = x.shape
+    def forward(self, x: torch.Tensor, time: torch.Tensor = None, z: torch.Tensor = None):
 
-        x = rearrange(x, 'b c h t -> b (c t) h')
+        if z.ndim == 3:
+            z = z.squeeze(1)
+        #assert x.dim() == 3 + self.n_dims
+        #assert not (time is None and z is None)
+        orig_shape = x.shape
+        #x = x.reshape(x.size(0), -1, *x.shape[3:])  # collapse T,C
 
+        #emb = 0
+        #if time is not None:
+        #    emb = emb + self.time_embed(fourier_embedding(time, self.hidden_channels))
+        #    self.param_use_time = True
+        #else:
+        #    assert not self.param_use_time, "Cannot pass time=None after using it in a previous forward pass"
+        #if z is not None:
+        #    if self.param_conditioning.startswith("scalar"):
+        #        if z.ndim == 1:
+        #            z = z[:, None]
+        #        for i in range(z.shape[-1]):
+        #            emb = emb + self.pde_emb[i](fourier_embedding(z[..., i], self.hidden_channels))
+        #    else:
+        #        raise NotImplementedError(f"Param conditioning {self.param_conditioning} not implemented")
+        #    self.param_use_cond = True
+        #else:
+        #    assert not self.param_use_cond, "Cannot pass z=None after using it in a previous forward pass"
+        emb = self.z_embed(z)
         x = self.image_proj(x)
 
         h = [x]
@@ -638,10 +656,10 @@ class Unet(nn.Module):
             if isinstance(m, Downsample):
                 x = m(x)
             else:
-                x = m(x)
+                x = m(x, emb)
             h.append(x)
 
-        x = self.middle(x)
+        x = self.middle(x, emb)
 
         for m in self.up:
             if isinstance(m, Upsample):
@@ -651,14 +669,10 @@ class Unet(nn.Module):
                 s = h.pop()
                 x = torch.cat((x, s), dim=1)
                 #
-                x = m(x)
+                x = m(x, emb)
 
         x = self.final(self.activation(self.norm(x)))
+        return x
         #return x.reshape(
         #    orig_shape[0], -1, (self.n_output_scalar_components + self.n_output_vector_components * 2), *orig_shape[3:]
         #)
-
-        return rearrange(x, 'b (c t) h -> b c h t', c=self.n_output_scalar_components + self.n_output_vector_components*2)
-
-
-
