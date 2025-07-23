@@ -97,17 +97,22 @@ class Zebra(PreTrainedModel):
 
         #print('sequences.shape', sequences.shape)
         #print('context_sequences.shape', context_sequences.shape)
-        
+
+        if sequences.ndim==4:
+            num_dimensions=1
+        elif sequences.ndim==5:
+            num_dimensions=2
+      
         # Reshape sequences
-        if self.num_dimensions == 1:
+        if num_dimensions==1: 
             sequences = rearrange(sequences, 'b c h t -> b (t h c)')
-        elif self.num_dimensions == 2:
+        elif num_dimensions==2: 
             sequences = rearrange(sequences, 'b c h w t -> b (t h w c)')
         
         if context_sequences is not None:
-            if self.num_dimensions==1:
+            if num_dimensions==1: 
                 context_sequences = rearrange(context_sequences, 'b k c h t -> b k t (h c)')
-            elif self.num_dimensions==2:
+            elif num_dimensions==2:
                 context_sequences = rearrange(context_sequences, 'b k c h w t -> b k t (h w c)')
 
         # Prepare sequences using single torch.cat operation

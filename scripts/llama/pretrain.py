@@ -56,20 +56,50 @@ def train(cfg: DictConfig):
 
      # load data
     if dataset_name=="wave2d":
-        train_loader, val_loader, test_loader = load_wave2d(cfg.data.data_dir, cfg.training.batch_size, cfg.training.batch_size, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size)
         if not cfg.training.tokenize_on_the_fly:
+            train_loader, val_loader, test_loader = load_wave2d(cfg.data.data_dir, cfg.training.batch_size, cfg.training.batch_size, sub_t=1, slice_size=30)
             token_train, token_val, token_test = tokenize_dataset(cfg.data.token_dataset_path, run_name, train_loader, val_loader, test_loader, tokenizer, device=torch.device("cuda") if cfg.training.devices>0 else torch.device("cpu"))
             train_dataset = TemporalDatasetWithContext(token_train, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size, num_context_trajectories=cfg.data.num_context_trajectories)
             val_dataset = TemporalDatasetWithContext(token_val, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size, num_context_trajectories=cfg.data.num_context_trajectories)
             test_dataset = TemporalDatasetWithContext(token_test, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size, num_context_trajectories=cfg.data.num_context_trajectories)
 
+            train_loader = torch.utils.data.DataLoader(
+                train_dataset,
+                batch_size=cfg.training.batch_size,
+                shuffle=True,
+                num_workers=cfg.training.num_workers,
+                pin_memory=True,
+            )
+            val_loader = torch.utils.data.DataLoader(
+                val_dataset,
+                batch_size=cfg.training.batch_size,
+                shuffle=False,
+                num_workers=cfg.training.num_workers,
+                pin_memory=True,
+            )
+
     elif dataset_name=="vorticity":
-        train_loader, val_loader, test_loader = load_vort(cfg.data.data_dir, cfg.training.batch_size, cfg.training.batch_size, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size)
         if not cfg.training.tokenize_on_the_fly:
+            train_loader, val_loader, test_loader = load_vort(cfg.data.data_dir, cfg.training.batch_size, cfg.training.batch_size, sub_t=1, slice_size=30)
             token_train, token_val, token_test = tokenize_dataset(cfg.data.token_dataset_path, run_name, train_loader, val_loader, test_loader, tokenizer, device=torch.device("cuda") if cfg.training.devices>0 else torch.device("cpu"))
             train_dataset = TemporalDatasetWithContext(token_train, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size, num_context_trajectories=cfg.data.num_context_trajectories)
             val_dataset = TemporalDatasetWithContext(token_val, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size, num_context_trajectories=cfg.data.num_context_trajectories)
             test_dataset = TemporalDatasetWithContext(token_test, sub_t=cfg.data.sub_t, slice_size=cfg.data.slice_size, num_context_trajectories=cfg.data.num_context_trajectories)
+
+            train_loader = torch.utils.data.DataLoader(
+                train_dataset,
+                batch_size=cfg.training.batch_size,
+                shuffle=True,
+                num_workers=cfg.training.num_workers,
+                pin_memory=True,
+            )
+            val_loader = torch.utils.data.DataLoader(
+                val_dataset,
+                batch_size=cfg.training.batch_size,
+                shuffle=False,
+                num_workers=cfg.training.num_workers,
+                pin_memory=True,
+            )
     else:
         u_train, u_val, u_test = get_data(cfg.data.data_dir, dataset_name, return_params=False)
 
