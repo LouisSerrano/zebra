@@ -2,7 +2,7 @@
 
 
 # 1. Official Code
-Official PyTorch implementation of Zebra | [Accepted at ICML 2025](https://openreview.net/forum?id=Aj8RKCGwjE&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3DNeurIPS.cc%2F2024%2FConference%2FAuthors%23your-submissions))
+Official PyTorch implementation of Zebra | [Accepted at ICML 2025](https://openreview.net/forum?id=22kNOkkokU))
 
 
 <p float="center">
