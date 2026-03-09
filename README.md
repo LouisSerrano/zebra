@@ -41,7 +41,38 @@ export MINICONDA_PATH=your_anaconda_path
 
 # 2. Data
 
-We will shortly push the datasets used in this paper on HuggingFace (https://huggingface.co/sogeeking) and provide scripts to **download** them directly from there in the folder `download_dataset`.
+All datasets are hosted on [HuggingFace](https://huggingface.co/sogeeking). You can download them using the provided script:
+
+```bash
+pip install huggingface_hub
+
+# Download specific datasets
+python download_data/download_data_hugging_face.py --datasets vorticity wave gs
+
+# Download a dataset and its OOD counterpart
+python download_data/download_data_hugging_face.py --datasets vorticity vorticity_ood
+
+# Download all datasets
+python download_data/download_data_hugging_face.py --datasets all
+
+# Specify a custom output directory (default: ./data)
+python download_data/download_data_hugging_face.py --datasets vorticity --data_dir /path/to/data
+```
+
+Available datasets:
+
+| Dataset | HuggingFace repo | Description |
+|---|---|---|
+| `vorticity` | [sogeeking/vorticity](https://huggingface.co/datasets/sogeeking/vorticity) | 2D Navier-Stokes (vorticity form) |
+| `vorticity_ood` | [sogeeking/vorticity_ood](https://huggingface.co/datasets/sogeeking/vorticity_ood) | OOD evaluation for vorticity |
+| `wave` | [sogeeking/wave](https://huggingface.co/datasets/sogeeking/wave) | 2D wave equation |
+| `wave_ood` | [sogeeking/wave_ood](https://huggingface.co/datasets/sogeeking/wave_ood) | OOD evaluation for wave |
+| `gs` | [sogeeking/gs](https://huggingface.co/datasets/sogeeking/gs) | 2D Gray-Scott reaction-diffusion |
+| `gs_ood` | [sogeeking/gs_ood](https://huggingface.co/datasets/sogeeking/gs_ood) | OOD evaluation for Gray-Scott |
+| `combined_equation` | [sogeeking/combined-equation-2](https://huggingface.co/datasets/sogeeking/combined-equation-2) | 1D combined equation |
+| `advection_diffusion` | [sogeeking/advection-diffusion](https://huggingface.co/datasets/sogeeking/advection-diffusion) | 1D advection-diffusion |
+| `heat_nu_forcing2` | [sogeeking/heat-nu-forcing-2](https://huggingface.co/datasets/sogeeking/heat-nu-forcing-2) | 1D heat (varying viscosity & forcing) |
+| `burgers_nu_forcing2` | [sogeeking/burgers-nu-forcing-2](https://huggingface.co/datasets/sogeeking/burgers-nu-forcing-2) | 1D Burgers (varying viscosity & forcing) |
 
 # 3. Run experiments 
 
